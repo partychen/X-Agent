@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "xcom": {
+            "command": "uv",
+            "args": [
+                "run",
+                "server.py"
+            ]
+        }
+    }
+}

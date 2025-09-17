@@ -1,0 +1,80 @@
+# ---- Python build / bytecode ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ---- Packaging / build artifacts ----
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# ---- Virtual environments ----
+.venv/
+venv/
+env/
+.envrc
+
+# ---- Environment files (keep secrets out of git) ----
+.env
+.env.*
+
+# ---- Caches & tooling ----
+.mypy_cache/
+.pytest_cache/
+.pyre/
+.pytype/
+.cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pybuild/
+
+# ---- Logs & runtime output ----
+logs/
+*.log
+*.out
+*.err
+
+# ---- Databases / local data ----
+*.sqlite3
+*.db
+*.db-journal
+
+# ---- IDE / Editor ----
+.vscode/
+.idea/
+*.code-workspace
+
+# ---- OS / Misc ----
+.DS_Store
+Thumbs.db
+
+# ---- Frontend (if later added) ----
+node_modules/
+*.tsbuildinfo
+
+# ---- Profiling ----
+.prof
+.profile
+*.pstats
+
+# ---- Jupyter / notebooks ----
+.ipynb_checkpoints/
+
+# ---- Hypothesis ----
+.hypothesis/
+
+# ---- PDM / pip / wheels ----
+pip-wheel-metadata/
+
+# ---- Generated static assets (add if you build separately) ----
+# static/dist/
+
+# ---- Keep dependency lock tracked ----
+!uv.lock
+
+# ---- Project specific ----
+# (Do NOT ignore x_mcp.json because it appears to be required config)
