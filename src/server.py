@@ -18,7 +18,11 @@ if not BEARER_TOKEN:
     print("Warning: X_BEARER_TOKEN not set. The get_user_tweets tool will fail until you configure it.", file=sys.stderr)
 
 mcp = FastMCP("X Tweets")
-@mcp.tool()
+@mcp.tool(
+    name="get_user_tweets",
+    description="Fetch tweets from a user's timeline.",
+    tags={"tweets", "fetch"}
+)
 def get_user_tweets(username: str) -> List[Dict[str, Any]]:
     headers = {"Authorization": f"Bearer {BEARER_TOKEN}"}
     base = os.getenv("X_BASE_URL", "https://api.x.com/2")
