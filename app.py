@@ -2,10 +2,9 @@ import streamlit as st
 import os
 import logging
 from dotenv import load_dotenv
-from azure.identity import AzureCliCredential, get_bearer_token_provider
-from langchain_openai import AzureChatOpenAI
 from langchain.agents import create_agent
 from tools import get_user_post
+from llm_factory import LLMFactory
 
 # 配置日志
 logging.basicConfig(
@@ -24,25 +23,20 @@ st.set_page_config(page_title="Twitter用户行为分析Agent", page_icon="🤖"
 
 # Initialize LLM
 @st.cache_resource
-def get_llm():
-    logger.info("正在初始化 Azure OpenAI LLM...")
-    token_provider = get_bearer_token_provider(
-        AzureCliCredential(), "https://cognitiveservices.azure.com/.default"
-    )
-    llm = AzureChatOpenAI(
-        azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
+def get_llm(provider_name: str = None):
+    """
+    初始化LLM
+    
+    Args:
+        provider_name: LLM提供商名称 (azure_openai, deepseek, kimi, doubao等)
+                      如果为None，则从环境变量 LLM_PROVIDER 读取
+    """
+    return LLMFactory.create_llm(
+        provider_name=provider_name,
         max_retries=3,
         temperature=0.1,
         top_p=0.9,
-        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-        azure_ad_token_provider=token_provider,
     )
-    logger.info(f"LLM 初始化完成 - 部署: {os.getenv('AZURE_OPENAI_DEPLOYMENT_NAME')}")
-    return llm
-
-
-llm = get_llm()
 SYSTEM_PROMPT = """你是一个Twitter用户行为分析专家。
 
 重要工作流程：
@@ -59,6 +53,40 @@ st.title("🤖 Twitter用户行为分析Agent")
 # Add sidebar for system prompt configuration
 with st.sidebar:
     st.header("⚙️ 系统设置")
+    
+    # Initialize LLM provider in session state
+    if "llm_provider" not in st.session_state:
+        st.session_state.llm_provider = os.getenv("LLM_PROVIDER", "azure_openai")
+    
+    # LLM Provider selection
+    provider_names = LLMFactory.get_provider_display_names()
+    provider_options = list(set(provider_names.values()))  # 去重显示名称
+    # 创建反向映射
+    display_to_key = {v: k for k, v in provider_names.items()}
+    
+    current_display = provider_names.get(st.session_state.llm_provider, "Azure OpenAI")
+    
+    selected_display = st.selectbox(
+        "🤖 LLM 提供商",
+        options=provider_options,
+        index=provider_options.index(current_display) if current_display in provider_options else 0,
+        help="选择要使用的大语言模型提供商"
+    )
+    
+    # 获取选中的provider key（取第一个匹配的）
+    selected_provider = next(k for k, v in provider_names.items() if v == selected_display)
+    
+    # Update LLM provider if changed
+    if selected_provider != st.session_state.llm_provider:
+        st.session_state.llm_provider = selected_provider
+        # Clear cache to reinitialize LLM
+        get_llm.clear()
+        if "agent_executor" in st.session_state:
+            del st.session_state.agent_executor
+        st.success(f"✅ 已切换到 {selected_display}")
+        st.rerun()
+    
+    st.divider()
     
     # Initialize system_prompt in session state if not exists
     if "system_prompt" not in st.session_state:
@@ -99,8 +127,9 @@ if "messages" not in st.session_state:
     logger.info("初始化消息历史")
 if "agent_executor" not in st.session_state:
     logger.info("正在创建 Agent...")
-    st.session_state.agent_executor = create_agent(get_llm(), [get_user_post])
-    logger.info("Agent 创建完成，已注册工具: get_user_post")
+    current_provider = st.session_state.get("llm_provider", os.getenv("LLM_PROVIDER", "azure_openai"))
+    st.session_state.agent_executor = create_agent(get_llm(current_provider), [get_user_post])
+    logger.info(f"Agent 创建完成 - 使用 {current_provider}，已注册工具: get_user_post")
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
     st.session_state.conversation_history.append(("system", SYSTEM_PROMPT))
@@ -114,10 +143,6 @@ for message in st.session_state.messages:
 
 # Accept user input
 if prompt := st.chat_input("请输入你想分析的Twitter用户行为问题..."):
-    # Check if API key is configured
-    if not llm:
-        st.error("⚠️ 请先在 .env 文件中配置 Key")
-        st.stop()
     
     logger.info("=" * 80)
     logger.info(f"用户输入: {prompt}")
