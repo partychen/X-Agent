@@ -91,13 +91,6 @@ uv run streamlit run app.py
 5. 你可以继续提问以获取更深入的分析
 6. 可以随时在边栏切换不同的 LLM 提供商
 
-## 测试
-
-运行测试脚本验证功能：
-```bash
-uv run python test_30_posts.py
-```
-
 ## 技术栈
 
 - **Streamlit**：Web 界面
