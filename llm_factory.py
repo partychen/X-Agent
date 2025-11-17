@@ -186,17 +186,3 @@ class LLMFactory:
             key: provider.get_name() 
             for key, provider in cls._providers.items()
         }
-
-
-def get_llm(provider_name: Optional[str] = None, **kwargs):
-    """
-    便捷函数：创建LLM实例
-    
-    Args:
-        provider_name: LLM提供商名称 (azure_openai, deepseek, kimi, doubao等)
-        **kwargs: 传递给LLM的其他参数
-    
-    Returns:
-        LLM实例
-    """
-    return LLMFactory.create_llm(provider_name, **kwargs)
