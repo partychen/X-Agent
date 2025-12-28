@@ -58,7 +58,7 @@ def _generate_assistant_response():
                 # 清空状态显示
                 callback_handler.clear_display()
                 
-                ai_message = response_result["messages"][-1].content
+                ai_message = response_result["output"]
                 logger.info(f"AI 结果生成: {len(ai_message)} 字符")
 
                 # 添加AI响应到历史
