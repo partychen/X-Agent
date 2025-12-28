@@ -3,8 +3,8 @@ import streamlit as st
 import logging
 from dotenv import load_dotenv
 
-from sidebar import render_sidebar
-from chatbox import render_chatbox
+from ui.sidebar import render_sidebar
+from ui.chatbox import render_chatbox
 
 logging.basicConfig(
     level=logging.INFO,

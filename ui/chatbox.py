@@ -2,11 +2,11 @@
 import streamlit as st
 import os
 import logging
-from langchain.agents import create_agent
+from agent.agent_utils import create_agent
 
-from tools import get_user_post
-from llm_factory import LLMFactory
-from callbacks import CustomStreamlitCallbackHandler
+from tools import get_tools
+from agent.llm_factory import LLMFactory
+from agent.callbacks import CustomStreamlitCallbackHandler
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ def _initialize_session_state():
     
     if "agent_executor" not in st.session_state:
         current_provider = st.session_state.get("llm_provider", os.getenv("LLM_PROVIDER", "azure_openai"))
-        st.session_state.agent_executor = create_agent(LLMFactory.create_llm(current_provider), [get_user_post])
+        st.session_state.agent_executor = create_agent(LLMFactory.create_llm(current_provider), get_tools())
 
 
 def _display_chat_messages():

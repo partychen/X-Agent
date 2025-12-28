@@ -3,8 +3,8 @@ import streamlit as st
 import os
 from collections import deque
 
-from constants import DEFAULT_USER_SYSTEM_PROMPT
-from utility import compose_system_prompt
+from utilities.constants import DEFAULT_USER_SYSTEM_PROMPT
+from utilities.utility import compose_system_prompt
 
 
 def _reset_conversation_history(prompt: str):
@@ -16,7 +16,7 @@ def _reset_conversation_history(prompt: str):
 
 def _render_llm_provider_selector():
     """渲染LLM提供商选择器"""
-    from llm_factory import LLMFactory
+    from agent.llm_factory import LLMFactory
     
     # 初始化session state
     if "llm_provider" not in st.session_state:
