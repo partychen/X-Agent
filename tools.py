@@ -2,29 +2,44 @@ from langchain_core.tools import tool
 from typing import List, Dict, Any
 from playwright.sync_api import sync_playwright, Page
 import time
-import sys
-import asyncio
 import logging
+import os
 
 # 获取日志记录器（使用模块名，这样会继承 app.py 的配置）
 logger = logging.getLogger(__name__)
 
-# 修复 Python 3.13 在 Windows 上的事件循环策略问题
-if sys.platform == "win32" and sys.version_info >= (3, 13):
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+# 从环境变量读取配置
+NITTER_INSTANCES = [url.strip() for url in os.getenv("NITTER_INSTANCES", "https://nitter.net").split(",") if url.strip()]
+PROXY_URL = os.getenv("PROXY_URL", "").strip()
 
 
 def _setup_browser(playwright):
     """设置浏览器并返回页面对象"""
     logger.info("正在启动浏览器（无头模式）...")
-    browser = playwright.chromium.launch(
-        headless=True,
-        channel="chrome",
-        args=['--disable-blink-features=AutomationControlled']
-    )
+    
+    launch_args = {
+        "headless": True,
+        "channel": "chrome",
+        "args": ['--disable-blink-features=AutomationControlled']
+    }
+    
+    if PROXY_URL:
+        logger.info(f"使用代理: {PROXY_URL}")
+        launch_args["proxy"] = {"server": PROXY_URL}
+        
+    browser = playwright.chromium.launch(**launch_args)
+    
     context = browser.new_context(
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        viewport={'width': 1920, 'height': 1080}
+        user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        viewport={'width': 1920, 'height': 1080},
+        ignore_https_errors=True,
+        extra_http_headers={
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Cache-Control": "max-age=0",
+            "Upgrade-Insecure-Requests": "1",
+        }
     )
     page = context.new_page()
     page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => false})")
@@ -99,12 +114,29 @@ def get_user_post(username: str, count: int = 10) -> List[Dict[str, Any]]:
         with sync_playwright() as p:
             browser, page = _setup_browser(p)
             
-            # 访问页面
-            url = f"https://nitter.net/{username}"
-            logger.info(f"正在访问: {url}")
-            page.goto(url, wait_until="load", timeout=60000)
-            logger.info(f"页面加载完成，等待3秒...")
-            time.sleep(3)
+            # 尝试不同的 Nitter 实例
+            success = False
+            for instance in NITTER_INSTANCES:
+                try:
+                    url = f"{instance}/{username}"
+                    logger.info(f"正在尝试访问: {url}")
+                    page.goto(url, wait_until="load", timeout=60000)
+                    logger.info(f"页面加载完成，等待3秒...")
+                    time.sleep(3)
+                    
+                    # 检查是否成功加载（是否有推文）
+                    if page.query_selector("div.timeline-item"):
+                        logger.info(f"成功连接到实例: {instance}")
+                        success = True
+                        break
+                    else:
+                        logger.warning(f"实例 {instance} 未返回推文，尝试下一个...")
+                except Exception as e:
+                    logger.warning(f"访问实例 {instance} 失败: {str(e)}")
+                    continue
+            
+            if not success:
+                raise Exception("所有 Nitter 实例均无法访问或未返回数据")
             
             # 滚动加载推文直到达到目标数量
             logger.info(f"开始抓取推文，目标数量: {target_count}")

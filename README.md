@@ -12,7 +12,7 @@
 
 ## 环境要求
 
-- Python 3.13+
+- Python 3.12+
 - 以下至少一种 LLM 服务账号：
   - Azure OpenAI
   - DeepSeek
@@ -72,6 +72,15 @@ DOUBAO_API_KEY=your-doubao-api-key
 DOUBAO_MODEL=doubao-pro-4k
 ```
 
+**Twitter/Nitter 配置**：
+```env
+# Nitter 实例列表，用逗号分隔
+NITTER_INSTANCES=https://nitter.net,https://nitter.privacydev.net
+
+# 代理设置 (可选)，例如: http://127.0.0.1:1087
+PROXY_URL=http://127.0.0.1:1087
+```
+
 详细配置请参考 `.env.example` 文件。
 
 ## 启动应用
@@ -97,7 +106,7 @@ uv run streamlit run app.py
 - **LangChain**：AI Agent 框架
 - **多 LLM 支持**：Azure OpenAI、DeepSeek、Kimi、豆包
 - **Playwright**：浏览器自动化
-- **Python 3.13**：开发语言
+- **Python 3.12**：开发语言
 
 ## LLM 提供商说明
 
