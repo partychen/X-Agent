@@ -4,23 +4,33 @@
 
 ## 功能特点
 
-- 🤖 **多 LLM 支持**：支持 Azure OpenAI、DeepSeek、Kimi、豆包等多种大语言模型
-- 🔍 **自动抓取推文**：通过 Playwright 自动抓取用户推文（无头模式，后台运行）
+- 🤖 **开源大模型**：通过 IP + 端口连接任意 OpenAI 兼容的模型服务
+- 🔍 **自动抓取推文**：支持 X 官方 API 和 Playwright 自动抓取，具备自动 Fallback 机制
 - 💬 **对话式交互**：通过 Streamlit 界面进行自然语言对话
 - 📊 **行为洞察**：分析用户兴趣、情感倾向、活跃时间等特征
-- 🔄 **灵活切换**：在界面中可随时切换不同的 LLM 提供商
 
 ## 环境要求
 
 - Python 3.12+
-- 以下至少一种 LLM 服务账号：
-  - Azure OpenAI
-  - DeepSeek
-  - Kimi (Moonshot)
-  - 豆包 (Doubao/字节跳动)
+- 开源大模型服务地址（IP + 端口，需兼容 OpenAI API 格式）
 - Chrome 浏览器（用于 Playwright）
 
 ## 安装步骤
+
+### 0. 安装 uv（Python 包管理器）
+
+本项目使用 [uv](https://docs.astral.sh/uv/) 作为包管理器，请先安装：
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+安装完成后验证：
+```powershell
+uv --version
+```
+
+> 💡 更多安装方式请参考 [uv 官方文档](https://docs.astral.sh/uv/getting-started/installation/)
 
 1. **克隆项目**
 ```bash
@@ -40,41 +50,38 @@ uv run playwright install chrome
 
 4. **配置环境变量**
 
-复制 `.env.example` 为 `.env` 并根据使用的 LLM 提供商配置相应变量：
+复制 `.env.example` 为 `.env` 并配置：
 
-**选择 LLM 提供商**（在 `.env` 中设置）：
-```env
-LLM_PROVIDER=azure_openai  # 可选: azure_openai, deepseek, kimi, doubao
+```bash
+cp .env.example .env
 ```
 
-**Azure OpenAI 配置**：
+**模型配置**：
 ```env
-AZURE_OPENAI_ENDPOINT=your_azure_endpoint
-AZURE_OPENAI_DEPLOYMENT_NAME=your_deployment_name
-AZURE_OPENAI_API_VERSION=2024-12-01-preview
+# 模型服务地址（填入提供的 IP + 端口）
+LOCAL_LLM_BASE_URL=http://192.168.1.100:8000/v1
+# 模型名称
+LOCAL_LLM_MODEL=qwen2.5:7b
+# API Key（如果服务方有要求则填写，否则保持默认）
+LOCAL_LLM_API_KEY=not-needed
 ```
 
-**DeepSeek 配置**：
-```env
-DEEPSEEK_API_KEY=your-deepseek-api-key
-DEEPSEEK_MODEL=deepseek-chat
-```
+**Twitter/X 数据获取配置**：
 
-**Kimi (Moonshot) 配置**：
-```env
-KIMI_API_KEY=your-kimi-api-key
-KIMI_MODEL=moonshot-v1-8k
-```
+推文获取支持两种模式，并具备**自动 Fallback 机制**：
 
-**豆包 (Doubao) 配置**：
-```env
-DOUBAO_API_KEY=your-doubao-api-key
-DOUBAO_MODEL=doubao-pro-4k
-```
+| 优先级 | 模式 | 说明 |
+|--------|------|------|
+| 1️⃣ | X (Twitter) 官方 API | 配置了 `TWITTER_BEARER_TOKEN` 时优先使用 |
+| 2️⃣ | Playwright + Nitter | API 不可用/Token 用尽时自动降级，或未配置 API 时直接使用 |
 
-**Twitter/Nitter 配置**：
 ```env
-# Nitter 实例列表，用逗号分隔
+# X (Twitter) API 配置 (可选)
+# 配置了 Bearer Token 将优先使用官方 API
+# API 失败（网络不通、Token 用尽 429、认证失败 401）时自动 Fallback 到 Playwright
+TWITTER_BEARER_TOKEN=your_bearer_token_here
+
+# Nitter 实例列表，用逗号分隔 (Playwright Fallback 使用)
 NITTER_INSTANCES=https://nitter.net,https://nitter.privacydev.net
 
 # 代理设置 (可选)，例如: http://127.0.0.1:1087
@@ -93,42 +100,18 @@ uv run streamlit run app.py
 
 ## 使用方法
 
-1. 启动应用后，在左侧边栏选择要使用的 LLM 提供商
-2. 在聊天框中输入你想分析的 Twitter 用户
-3. 例如：`分析一下 @elonmusk 的推文内容`
-4. AI 会自动抓取该用户的推文并进行分析
-5. 你可以继续提问以获取更深入的分析
-6. 可以随时在边栏切换不同的 LLM 提供商
+1. 启动应用后，在聊天框中输入你想分析的 Twitter 用户
+2. 例如：`分析一下 @elonmusk 的推文内容`
+3. AI 会自动抓取该用户的推文并进行分析
+4. 你可以继续提问以获取更深入的分析
 
 ## 技术栈
 
 - **Streamlit**：Web 界面
 - **LangChain**：AI Agent 框架
-- **多 LLM 支持**：Azure OpenAI、DeepSeek、Kimi、豆包
+- **OpenAI 兼容 API**：连接开源大模型服务
 - **Playwright**：浏览器自动化
 - **Python 3.12**：开发语言
-
-## LLM 提供商说明
-
-### Azure OpenAI
-- 需要 Azure 订阅和 OpenAI 服务
-- 使用 Azure CLI 凭据进行身份验证
-- 支持多种 GPT 模型
-
-### DeepSeek
-- 访问 [deepseek.com](https://www.deepseek.com) 获取 API Key
-- 提供高性价比的模型服务
-- 使用 OpenAI 兼容的 API
-
-### Kimi (Moonshot)
-- 访问 [moonshot.cn](https://www.moonshot.cn) 获取 API Key
-- 由月之暗面科技提供
-- 支持超长上下文
-
-### 豆包 (Doubao)
-- 字节跳动旗下的 AI 服务
-- 访问火山引擎获取 API Key
-- 支持多种模型规格
 
 ## 许可证
 
