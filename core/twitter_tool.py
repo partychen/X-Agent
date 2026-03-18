@@ -11,7 +11,7 @@ from fetcher.twitter_scraper import TwitterScraper
 
 logger = logging.getLogger(__name__)
 
-NITTER_INSTANCES = [u.strip() for u in os.getenv("NITTER_INSTANCES", "https://nitter.net").split(",") if u.strip()]
+NITTER_INSTANCES = [u.strip() for u in os.getenv("NITTER_INSTANCES", "https://xcancel.com").split(",") if u.strip()]
 PROXY_URL = os.getenv("PROXY_URL", "").strip()
 
 

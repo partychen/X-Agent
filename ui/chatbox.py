@@ -62,7 +62,8 @@ def _generate_assistant_response():
 
             except Exception as e:
                 error_message = f"❌ 发生错误: {str(e)}"
-                logger.error(f"Agent 执行失败: {e}", exc_info=True)
+                logger.error(f"Agent 执行失败: {e}")
+                logger.debug("Agent 执行失败详细堆栈", exc_info=True)
                 st.error(error_message)
                 st.session_state.messages.append({"role": "assistant", "content": error_message})
 

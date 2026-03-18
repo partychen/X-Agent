@@ -90,5 +90,6 @@ class TwitterApiFetcher:
             return _error(f"API connection failed - {e}")
 
         except Exception as e:
-            logger.error(f"API 请求异常: {e}", exc_info=True)
+            logger.error(f"API 请求异常: {e}")
+            logger.debug("API 请求异常详细堆栈", exc_info=True)
             return _error(f"API request exception - {e}")

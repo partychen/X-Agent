@@ -1,8 +1,12 @@
 """Twitter用户行为分析Agent - 主应用入口"""
-import streamlit as st
 import logging
 from dotenv import load_dotenv
 
+# ⚠️ 必须在所有业务模块 import 之前加载 .env，
+# 否则模块顶层的 os.getenv() 读不到 .env 中的值
+load_dotenv()
+
+import streamlit as st
 from ui.sidebar import render_sidebar
 from ui.chatbox import render_chatbox
 
@@ -12,8 +16,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
-
-load_dotenv()
 st.set_page_config(
     page_title="Twitter用户行为分析Agent",
     page_icon="🤖",
