@@ -4,8 +4,6 @@ import asyncio
 import logging
 import os
 import sys
-import tempfile
-import shutil
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any
@@ -31,6 +29,9 @@ _VERIFICATION_MARKERS = (
     "this process is automatic",
     "x cancelled",
 )
+_DEFAULT_PROFILE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", ".playwright", "twitter-scraper")
+)
 
 
 class TwitterScraper:
@@ -41,10 +42,12 @@ class TwitterScraper:
         nitter_instances: List[str],
         proxy_url: str = "",
         headless: bool | None = None,
+        user_data_dir: str | None = None,
     ):
         self.nitter_instances = nitter_instances
         self.proxy_url = proxy_url
         self.headless = self._resolve_headless(headless)
+        self.user_data_dir = self._resolve_user_data_dir(user_data_dir)
         self.verification_timeout_ms = int(os.getenv("SCRAPER_VERIFICATION_TIMEOUT_MS", "120000"))
 
     @staticmethod
@@ -53,29 +56,31 @@ class TwitterScraper:
             return headless
         return os.getenv("SCRAPER_HEADLESS", "true").strip().lower() not in {"0", "false", "no", "off"}
 
+    @staticmethod
+    def _resolve_user_data_dir(user_data_dir: str | None) -> str:
+        path = (user_data_dir or os.getenv("SCRAPER_USER_DATA_DIR", "")).strip() or _DEFAULT_PROFILE_DIR
+        os.makedirs(path, exist_ok=True)
+        return path
+
     # ---------- async 核心 ----------
 
     async def _async_get_tweets(self, username: str, count: int) -> List[Dict[str, Any]]:
         target = min(count, 100)
-        tmp_dir = tempfile.mkdtemp(prefix="scraper-")
 
-        try:
-            async with async_playwright() as pw:
-                context = await self._launch_context(pw, tmp_dir)
-                try:
-                    page = await self._new_stealth_page(context)
-                    page = await self._navigate_to_nitter(page, username)
-                    posts = await self._scrape_tweets(page, target)
-                finally:
-                    await context.close()
-        finally:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
+        async with async_playwright() as pw:
+            context = await self._launch_context(pw)
+            try:
+                page = await self._new_stealth_page(context)
+                page = await self._navigate_to_nitter(page, username)
+                posts = await self._scrape_tweets(page, target)
+            finally:
+                await context.close()
 
         if not posts:
             return [{"text": f"No posts found for @{username}", "created_at": ""}]
         return posts
 
-    async def _launch_context(self, pw, user_data_dir: str):
+    async def _launch_context(self, pw):
         launch_opts: dict = {
             "headless": self.headless,
             "channel": "chrome",
@@ -85,7 +90,7 @@ class TwitterScraper:
                 "--disable-dev-shm-usage",
                 "--no-first-run",
                 "--no-default-browser-check",
-                "--window-position=-32000,-32000",
+                "--window-position=3000,3000",
             ],
             "viewport": {"width": 1440, "height": 900},
             "locale": "en-US",
@@ -95,7 +100,7 @@ class TwitterScraper:
         if self.proxy_url:
             launch_opts["proxy"] = {"server": self.proxy_url}
 
-        context = await pw.chromium.launch_persistent_context(user_data_dir, **launch_opts)
+        context = await pw.chromium.launch_persistent_context(self.user_data_dir, **launch_opts)
         await context.add_init_script(
             """
             // 隐藏 webdriver 标志
@@ -164,7 +169,7 @@ class TwitterScraper:
                 title = (await page.title()).lower()
                 if any(marker in title or marker in page_text for marker in _VERIFICATION_MARKERS):
                     if not saw_verification_page:
-                        logger.info("检测到验证页，等待自动跳转: %s", page.url)
+                        logger.info("检测到验证页，等待自动跳转: %s | profile=%s", page.url, self.user_data_dir)
                         saw_verification_page = True
                 elif saw_verification_page:
                     logger.info("验证页已跳转，当前 URL: %s", page.url)
@@ -291,6 +296,5 @@ class TwitterScraper:
             except RuntimeError:
                 return asyncio.run(self._async_get_tweets(username, count))
         except Exception as e:
-            logger.error(f"抓取失败: {e}")
-            logger.debug("抓取失败详细堆栈", exc_info=True)
+            logger.error(f"抓取失败: {e}", exc_info=True)
             return _ERROR(f"Failed to fetch posts - {e}")

@@ -5,7 +5,7 @@ import streamlit as st
 
 from core.agent import create_agent
 from core.llm import create_llm
-from core.twitter_tool import get_tools
+from core.twitter_tool import get_tools, set_fetch_mode
 from core.callbacks import StreamlitCallbackHandler
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,9 @@ def _generate_assistant_response():
         with st.spinner("AI 正在思考中..."):
             try:
                 logger.info("开始调用 Agent 执行器...")
+
+                # 同步前端选择的获取模式到工具层
+                set_fetch_mode(st.session_state.get("fetch_mode", "auto"))
 
                 callback_handler = StreamlitCallbackHandler()
 

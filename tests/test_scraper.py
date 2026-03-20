@@ -1,6 +1,7 @@
 """测试脚本 - 直接调用 _fetch_via_scraper 获取 elonmusk 的推文"""
 
 import logging
+import json
 import os
 import sys
 from dotenv import load_dotenv
@@ -25,15 +26,23 @@ PROXY_URL = os.getenv("PROXY_URL", "").strip()
 TARGET_USERNAME = os.getenv("TARGET_USERNAME", "wanjunxie").strip() or "wanjunxie"
 TWEET_COUNT = int(os.getenv("TWEET_COUNT", "5"))
 SCRAPER_HEADLESS = os.getenv("SCRAPER_HEADLESS", "false").strip().lower() not in {"0", "false", "no", "off"}
+SCRAPER_USER_DATA_DIR = os.getenv("SCRAPER_USER_DATA_DIR", "").strip()
 # ======================================
 
 if __name__ == "__main__":
-    print(f"抓取 @{TARGET_USERNAME} 的推文 (实例: {NITTER_INSTANCES[0]}, 无头: {SCRAPER_HEADLESS})")
+    print("=" * 60)
+    print(f"测试: 通过 Playwright/Nitter 抓取 @{TARGET_USERNAME} 的推文")
+    print(f"Nitter 实例: {NITTER_INSTANCES}")
+    print(f"代理: {PROXY_URL}")
+    print(f"无头模式: {SCRAPER_HEADLESS}")
+    print(f"浏览器资料目录: {SCRAPER_USER_DATA_DIR or '默认'}")
+    print("=" * 60)
 
     scraper = TwitterScraper(
         NITTER_INSTANCES,
         PROXY_URL,
         headless=SCRAPER_HEADLESS,
+        user_data_dir=SCRAPER_USER_DATA_DIR or None,
     )
     result = scraper.get_tweets(TARGET_USERNAME, TWEET_COUNT)
 
@@ -41,11 +50,23 @@ if __name__ == "__main__":
         return bool(result) and all(str(item.get("text", "")).startswith("Error:") for item in result)
 
     if _is_error_result(result):
-        print(f"❌ 抓取失败: {result[0].get('text', 'Unknown error')}")
+        print("\n" + "=" * 60)
+        print("结果: 抓取失败")
+        print("=" * 60)
+        print(result[0].get("text", "Unknown error"))
+        print("\n\n===== 完整 JSON =====")
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         sys.exit(1)
 
-    print(f"✅ 共获取 {len(result)} 条推文")
+    print("\n" + "=" * 60)
+    print(f"结果: 共获取 {len(result)} 条推文")
+    print("=" * 60)
+
     for i, tweet in enumerate(result, 1):
-        created = tweet.get("created_at", "N/A")
-        text = tweet.get("text", "N/A")[:80]
-        print(f"  {i}. [{created}] {text}...")
+        print(f"\n--- 推文 #{i} ---")
+        print(f"时间: {tweet.get('created_at', 'N/A')}")
+        print(f"内容: {tweet.get('text', 'N/A')[:200]}")
+
+    # 同时输出完整 JSON 方便调试
+    print("\n\n===== 完整 JSON =====")
+    print(json.dumps(result, ensure_ascii=False, indent=2))

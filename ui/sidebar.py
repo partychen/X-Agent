@@ -5,6 +5,12 @@ import streamlit as st
 
 from core.prompts import DEFAULT_USER_SYSTEM_PROMPT, compose_system_prompt
 
+FETCH_MODE_OPTIONS = {
+    "auto": "🔄 自动（API 优先，失败回退爬虫）",
+    "api_only": "🔑 仅 API",
+    "scraper_only": "🕷️ 仅爬虫",
+}
+
 
 def _reset_conversation_history(prompt: str):
     st.session_state.conversation_history = deque(maxlen=20)
@@ -45,8 +51,31 @@ def _render_action_buttons():
         st.rerun()
 
 
+def _render_fetch_mode_selector():
+    """渲染数据获取模式选择器"""
+    if "fetch_mode" not in st.session_state:
+        st.session_state.fetch_mode = "auto"
+
+    st.subheader("数据获取方式")
+
+    selected = st.radio(
+        "选择推文获取模式",
+        options=list(FETCH_MODE_OPTIONS.keys()),
+        format_func=lambda k: FETCH_MODE_OPTIONS[k],
+        index=list(FETCH_MODE_OPTIONS.keys()).index(st.session_state.fetch_mode),
+        key="fetch_mode_radio",
+        help="auto: 优先用 API，失败自动回退爬虫\n仅 API: 只用官方 API（需配置 Bearer Token）\n仅爬虫: 只用 Playwright/Nitter 爬虫",
+    )
+
+    if selected != st.session_state.fetch_mode:
+        st.session_state.fetch_mode = selected
+        st.toast(f"已切换为: {FETCH_MODE_OPTIONS[selected]}")
+
+
 def render_sidebar():
     with st.sidebar:
         st.header("⚙️ 系统设置")
+        _render_fetch_mode_selector()
+        st.divider()
         _render_system_prompt_editor()
         _render_action_buttons()

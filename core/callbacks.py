@@ -1,5 +1,6 @@
 """Streamlit 回调处理器 - 实时显示 Agent 执行过程"""
 
+import ast
 import json
 import logging
 from datetime import datetime
@@ -84,7 +85,10 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
     def _render_tweets(self, output_str: str):
         """解析并展示推文列表"""
         try:
-            posts = json.loads(output_str)
+            try:
+                posts = json.loads(output_str)
+            except json.JSONDecodeError:
+                posts = ast.literal_eval(output_str)
             if not isinstance(posts, list) or not posts:
                 raise ValueError("empty")
 
